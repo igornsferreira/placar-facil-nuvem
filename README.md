@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="./logo.png" width="220"/>
+</p>
+
+<h1 align="center">Placar Fácil</h1>
+
 # Placar Fácil — MVP (AWS: API Gateway + Lambda + S3 + CloudWatch)
 
 **Visão geral:** Placar de partidas rápido, com times configuráveis, sets, pontos por set e vencedor automático (maioria de sets). 
@@ -8,13 +14,13 @@
 - `lambda_create_match.py` — cria e salva o JSON de uma partida em S3 (`matches/match-<id>.json`)
 - `lambda_get_match.py` — lê e retorna a partida
 - `lambda_update_score.py` — atualiza pontuação/sets e calcula vencedor automaticamente
-- `static/index.html` — frontend em Bootstrap (coloque o logo em `static/img/logo.png`)
+- `static/index.html` — frontend em Bootstrap
 - `README.md` — este arquivo
 
 ---
 
 ## Formato do JSON por partida
-Cada objeto salvo em `s3://<bucket>/matches/match-<id>.json` tem este formato mínimo:
+Cada objeto salvo em `s3://matches-placar-facil/matches/match-<id>.json` tem este formato mínimo:
 
 ```json
 {
