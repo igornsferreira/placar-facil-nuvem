@@ -99,20 +99,28 @@ const API_BASE = "https://ysy41qykyg.execute-api.sa-east-1.amazonaws.com/prod";
 function e(text){ if(!text) return ''; return text.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
 async function apiCreateMatch(payload){
-  const r = await fetch(`${API_BASE}/matches`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-  return r;
+  return await fetch(`${API_BASE}/matches`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
 }
+
 async function apiGetMatch(id){
-  const r = await fetch(`${API_BASE}/matches/${encodeURIComponent(id)}`);
-  return r;
+  return await fetch(`${API_BASE}/matches/${encodeURIComponent(id)}`);
 }
+
 async function apiListMatches(){
-  const r = await fetch(`${API_BASE}/matches`); // list endpoint
-  return r;
+  const r = await fetch(`${API_BASE}/matches`);
+  return await r.json(); // retorna lista direta do seu Lambda
 }
+
 async function apiUpdateScore(id, payload){
-  const r = await fetch(`${API_BASE}/matches/${encodeURIComponent(id)}/score`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-  return r;
+  return await fetch(`${API_BASE}/matches/${encodeURIComponent(id)}/score`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
 }
 
 document.getElementById('btnCreate').onclick = async ()=>{
@@ -122,32 +130,27 @@ document.getElementById('btnCreate').onclick = async ()=>{
   const sets = parseInt(document.getElementById('sets').value || 3);
   const maxPoints = parseInt(document.getElementById('maxPoints').value || 25);
   const timeLimitValue = document.getElementById('timeLimit').value.trim();
-  const payload = { 
-  name, 
-  teamA, 
-  teamB, 
-  sets, 
-  maxPoints, 
-  timeLimit: timeLimitValue || null 
-};
+  const payload = { name, teamA, teamB, sets, maxPoints, timeLimit: timeLimitValue || null };
+
   const resp = await apiCreateMatch(payload);
   if(!resp.ok){ alert('Erro ao criar partida'); return; }
+
+  const data = await resp.json();
   await load();
+  openMatch(data.match.id); // abre automaticamente o modal
 };
 
 document.getElementById('btnRefresh').onclick = load;
 
 async function load(){
-  const r = await apiListMatches();
-  if(!r.ok){ document.getElementById('list').innerHTML = '<div class="alert alert-warning">Erro ao carregar partidas</div>'; return; }
-  const j = await r.json();
-  renderList(j.matches || []);
+  const matches = await apiListMatches();
+  renderList(matches || []);
 }
 
 function renderList(matches){
   const container = document.getElementById('list');
   container.innerHTML = '';
-  if((matches||[]).length === 0) {
+  if(matches.length === 0) {
     container.innerHTML = '<div class="card p-3">Nenhuma partida hoje. Crie uma partida à esquerda.</div>';
     return;
   }
@@ -173,9 +176,7 @@ function renderList(matches){
 }
 
 async function openMatch(id){
-  const r = await apiGetMatch(id);
-  if(!r.ok){ alert('Erro ao carregar partida'); return; }
-  const m = await r.json();
+  const m = await (await apiGetMatch(id)).json();
   showModal(m);
 }
 
@@ -198,10 +199,13 @@ function showModal(m){
   html += `<div>`;
   (m.sets || []).forEach(s=>{
     html += `<div class="set-box mb-2">
-      <div class="d-flex justify-content-between align-items-center"><div><strong>Set ${s.set}</strong>${s.finished ? ' <small class="text-success">(final)</small>' : ''}</div>
-      <div class="score">${s.A} <small class="text-muted">x</small> ${s.B}</div></div></div>`;
+      <div class="d-flex justify-content-between align-items-center">
+        <div><strong>Set ${s.set}</strong>${s.finished ? ' <small class="text-success">(final)</small>' : ''}</div>
+        <div class="score">${s.A} <small class="text-muted">x</small> ${s.B}</div>
+      </div>
+    </div>`;
   });
-  // controls: only if not final
+
   if(m.status !== 'finalizado'){
     html += `<div class="mt-2 d-flex gap-2">
       <button class="btn btn-accent" onclick="point('${m.id}','A',1)">${teamA} +1</button>
