@@ -2,9 +2,7 @@
   <img src="static/img/logo.png" width="220"/>
 </p>
 
-<h1 align="center">Placar Fácil</h1>
-
-# Placar Fácil — MVP (AWS: API Gateway + Lambda + S3 + CloudWatch)
+<h1 align="center">Placar Fácil — MVP (AWS: API Gateway + Lambda + S3 + CloudWatch)</h1>
 
 **Visão geral:** Placar de partidas rápido, com times configuráveis, sets, pontos por set e vencedor automático (maioria de sets). 
 
