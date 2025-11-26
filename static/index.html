@@ -1,0 +1,235 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Placar Fácil</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --blue:#062445;
+      --orange:#FF6A00;
+    }
+    body{background:linear-gradient(180deg, #F7F9FB 0%, #ffffff 100%);font-family:Inter,system-ui,Arial,Helvetica,sans-serif;}
+    .topbar{background:var(--blue);color:#fff;padding:14px 0}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand img{height:48px}
+    .card-custom{border-radius:12px;box-shadow:0 6px 20px rgba(6,36,69,0.06);}
+    .btn-accent{background:var(--orange);border-color:var(--orange);color:#fff}
+    .badge-winner{background:var(--orange);color:#062445;font-weight:700}
+    .set-box{border:1px solid #e9eef5;padding:10px;border-radius:8px;background:#fff}
+    .score{font-size:28px;font-weight:700}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="brand">
+        <img src="img/logo.png" alt="Placar Fácil logo" />
+        <div>
+          <h4 style="margin:0">Placar Fácil</h4>
+          <small>Crie jogos rapidamente — controle sets, pontos e veja o vencedor automático</small>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container my-4">
+    <div class="row g-3">
+      <div class="col-lg-5">
+        <div class="card card-custom p-3">
+          <h5>Criar partida</h5>
+          <div class="mb-2">
+            <label class="form-label">Time A</label>
+            <input id="teamA" class="form-control" placeholder="Ex: Águias">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Time B</label>
+            <input id="teamB" class="form-control" placeholder="Ex: Tigres">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Nome da partida (opcional)</label>
+            <input id="name" class="form-control" placeholder="Ex: Final Sub-15">
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col">
+              <label class="form-label">Sets</label>
+              <select id="sets" class="form-select">
+                <option value="1">1</option>
+                <option value="3" selected>3</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+              </select>
+            </div>
+            <div class="col">
+              <label class="form-label">Pontos por set</label>
+              <input id="maxPoints" type="number" class="form-control" value="25" min="1">
+            </div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Tempo máximo (opcional)</label>
+            <input id="timeLimit" class="form-control" placeholder="30m">
+          </div>
+          <div class="d-flex gap-2">
+            <button id="btnCreate" class="btn btn-accent">Criar partida</button>
+            <button id="btnRefresh" class="btn btn-outline-secondary">Atualizar lista</button>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div class="card card-custom p-3">
+            <h6>Instruções rápidas</h6>
+            <ul>
+              <li>Crie uma partida definindo os times e parâmetros.</li>
+              <li>Abra a partida para marcar pontos (o sistema cria sets automaticamente).</li>
+              <li>Quando um time ganhar a maioria dos sets, o vencedor é definido automaticamente.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div id="list" class="mb-3"></div>
+      </div>
+    </div>
+  </main>
+
+<script>
+const API_BASE = "https://{API_BASE}"; // <<< SUBSTITUA pelo endpoint do API Gateway (ex: https://abc.execute-api.us-east-1.amazonaws.com/prod)
+
+function e(text){ if(!text) return ''; return text.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+async function apiCreateMatch(payload){
+  const r = await fetch(`${API_BASE}/match`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  return r;
+}
+async function apiGetMatch(id){
+  const r = await fetch(`${API_BASE}/match/${encodeURIComponent(id)}`);
+  return r;
+}
+async function apiListMatches(){
+  const r = await fetch(`${API_BASE}/match`); // list endpoint
+  return r;
+}
+async function apiUpdateScore(id, payload){
+  const r = await fetch(`${API_BASE}/match/${encodeURIComponent(id)}/score`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  return r;
+}
+
+document.getElementById('btnCreate').onclick = async ()=>{
+  const teamA = document.getElementById('teamA').value.trim() || 'Time A';
+  const teamB = document.getElementById('teamB').value.trim() || 'Time B';
+  const name = document.getElementById('name').value.trim() || `${teamA} x ${teamB}`;
+  const sets = parseInt(document.getElementById('sets').value || 3);
+  const maxPoints = parseInt(document.getElementById('maxPoints').value || 25);
+  const timeLimit = document.getElementById('timeLimit').value.trim() || null;
+  const payload = { name, teamA, teamB, sets, maxPoints, timeLimit };
+  const resp = await apiCreateMatch(payload);
+  if(!resp.ok){ alert('Erro ao criar partida'); return; }
+  await load();
+};
+
+document.getElementById('btnRefresh').onclick = load;
+
+async function load(){
+  const r = await apiListMatches();
+  if(!r.ok){ document.getElementById('list').innerHTML = '<div class="alert alert-warning">Erro ao carregar partidas</div>'; return; }
+  const j = await r.json();
+  renderList(j.matches || []);
+}
+
+function renderList(matches){
+  const container = document.getElementById('list');
+  container.innerHTML = '';
+  if((matches||[]).length === 0) {
+    container.innerHTML = '<div class="card p-3">Nenhuma partida hoje. Crie uma partida à esquerda.</div>';
+    return;
+  }
+  matches.forEach(m=>{
+    const div = document.createElement('div');
+    div.className = 'card mb-2 card-custom p-3';
+    const teamA = e(m.teamA), teamB = e(m.teamB);
+    const winnerBadge = m.status === 'finalizado' && m.vencedor ? `<span class="badge badge-winner">${m.vencedor}</span>` : '';
+    div.innerHTML = `
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h5 style="margin:0">${teamA} <small class="text-muted">x</small> ${teamB} ${winnerBadge}</h5>
+          <small class="text-muted">${m.sets ? m.sets.length : 0} sets • pontos/${m.maxPointsPerSet}</small>
+        </div>
+        <div class="text-end">
+          <small class="text-muted">${new Date((m.createdAt||0)*1000).toLocaleString()}</small><br>
+          <button class="btn btn-sm btn-outline-primary mt-2" onclick="openMatch('${m.id}')">Abrir</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+async function openMatch(id){
+  const r = await apiGetMatch(id);
+  if(!r.ok){ alert('Erro ao carregar partida'); return; }
+  const m = await r.json();
+  showModal(m);
+}
+
+function showModal(m){
+  const modal = document.createElement('div');
+  modal.style = "position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:9999";
+  modal.onclick = ()=> modal.remove();
+  const box = document.createElement('div');
+  box.className = "bg-white p-3 rounded";
+  box.style.width = '92%'; box.style.maxWidth = '760px';
+  box.onclick = e=> e.stopPropagation();
+
+  const teamA = e(m.teamA), teamB = e(m.teamB);
+  let html = `<div class="d-flex justify-content-between align-items-center mb-2">
+      <div><h5 style="margin:0">${e(m.name)} ${m.status==='finalizado' ? `<span class="badge badge-winner">Vencedor: ${e(m.vencedor||'—')}</span>` : ''}</h5>
+      <small class="text-muted">${teamA} • ${teamB}</small></div>
+      <div><small class="text-muted">Sets: ${m.setsTotal}</small></div>
+    </div>`;
+
+  html += `<div>`;
+  (m.sets || []).forEach(s=>{
+    html += `<div class="set-box mb-2">
+      <div class="d-flex justify-content-between align-items-center"><div><strong>Set ${s.set}</strong>${s.finished ? ' <small class="text-success">(final)</small>' : ''}</div>
+      <div class="score">${s.A} <small class="text-muted">x</small> ${s.B}</div></div></div>`;
+  });
+  // controls: only if not final
+  if(m.status !== 'finalizado'){
+    html += `<div class="mt-2 d-flex gap-2">
+      <button class="btn btn-accent" onclick="point('${m.id}','A',1)">${teamA} +1</button>
+      <button class="btn btn-outline-secondary" onclick="point('${m.id}','A',-1)">${teamA} -1</button>
+      <button class="btn btn-accent" onclick="point('${m.id}','B',1)">${teamB} +1</button>
+      <button class="btn btn-outline-secondary" onclick="point('${m.id}','B',-1)">${teamB} -1</button>
+      <button class="btn btn-outline-danger ms-auto" onclick="finish('${m.id}')">Finalizar</button>
+    </div>`;
+  }
+
+  html += `<div class="text-end mt-3"><button class="btn btn-sm btn-secondary" onclick="(this.closest('[style]').remove())">Fechar</button></div>`;
+  box.innerHTML = html;
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+}
+
+async function point(id, team, delta){
+  const payload = { action:'point', team, delta };
+  const r = await apiUpdateScore(id, payload);
+  if(!r.ok){ alert('Erro ao atualizar'); return; }
+  await load();
+  openMatch(id);
+}
+
+async function finish(id){
+  if(!confirm('Finalizar partida?')) return;
+  const payload = { action:'finish' };
+  const r = await apiUpdateScore(id, payload);
+  if(!r.ok){ alert('Erro'); return; }
+  await load();
+  openMatch(id);
+}
+
+// initial load
+load();
+</script>
+</body>
+</html>
