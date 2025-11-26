@@ -121,8 +121,15 @@ document.getElementById('btnCreate').onclick = async ()=>{
   const name = document.getElementById('name').value.trim() || `${teamA} x ${teamB}`;
   const sets = parseInt(document.getElementById('sets').value || 3);
   const maxPoints = parseInt(document.getElementById('maxPoints').value || 25);
-  const timeLimit = document.getElementById('timeLimit').value.trim() || null;
-  const payload = { name, teamA, teamB, sets, maxPoints, timeLimit };
+  const timeLimitValue = document.getElementById('timeLimit').value.trim();
+  const payload = { 
+  name, 
+  teamA, 
+  teamB, 
+  sets, 
+  maxPoints, 
+  timeLimit: timeLimitValue || null 
+};
   const resp = await apiCreateMatch(payload);
   if(!resp.ok){ alert('Erro ao criar partida'); return; }
   await load();
