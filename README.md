@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo.png" width="220"/>
+  <img src="static/img/logo.png" width="220"/>
 </p>
 
 <h1 align="center">Placar Fácil</h1>
