@@ -25,10 +25,11 @@ def lambda_handler(event, context):
         return response(200, {})
         
     path_params = event.get('pathParameters') or {}
-    match_id = path_params.get('id')
+    match_id = event.get('pathParameters', {}).get('matchId')
     
     if not match_id:
-        return response(400, {"error": "missing id parameter"})
+        print("ERRO: matchId nao encontrado em pathParameters:", event.get('pathParameters'))
+        return response(400, {"error": "missing id"})
 
     clean_id = match_id if match_id.startswith("match-") else f"match-{match_id}"
     key = f"matches/{clean_id}.json"

@@ -24,7 +24,7 @@ def lambda_handler(event, context):
         return response(200, {})
 
     path_params = event.get('pathParameters') or {}
-    match_id = path_params.get('id')
+    match_id = event.get('pathParameters', {}).get('matchId')
     if not match_id:
         return response(400, {"error": "missing id"})
 
