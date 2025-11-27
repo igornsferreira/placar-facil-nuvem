@@ -7,23 +7,25 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     :root{--blue:#062445;--orange:#FF6A00;}
-    body{background:linear-gradient(180deg, #F7F9FB 0%, #ffffff 100%);font-family:Inter,system-ui,Arial,Helvetica,sans-serif;}
+    body{background:linear-gradient(180deg, #F7F9FB 0%, #ffffff 100%);font-family:Inter,system-ui,Arial,Helvetica,sans-serif;min-height:100vh;}
     .topbar{background:var(--blue);color:#fff;padding:14px 0}
     .brand{display:flex;align-items:center;gap:12px}
-    .brand img{height:48px;border-radius:8px}
-    .card-custom{border-radius:12px;box-shadow:0 6px 20px rgba(6,36,69,0.06);}
-    .btn-accent{background:var(--orange);border:none;color:#fff}
-    .btn-accent:hover{background:#e55a00}
-    .badge-winner{background:var(--orange);color:#062445;font-weight:700;font-size:1.1em}
-    .set-box{border:1px solid #e9eef5;padding:12px;border-radius:8px;background:#fff;text-align:center}
-    .score{font-size:32px;font-weight:700}
+    .brand img{height:48px}
+    .card-custom{border-radius:12px;box-shadow:0 6px 20px rgba(6,36,69,0.06);background:#fff}
+    .btn-accent{background:var(--orange);border:none;color:#fff;font-weight:500}
+    .btn-accent:hover{background:#e55a00;color:#fff}
+    .badge-winner{background:var(--orange);color:#fff;font-weight:700;font-size:0.9em;padding:4px 12px}
+    .set-box{border:1px solid #e9eef5;padding:12px;border-radius:8px;background:#f8f9fa;margin-bottom:8px}
+    .score{font-size:28px;font-weight:700;color:var(--blue)}
+    .match-card{cursor:pointer;transition:transform 0.2s}
+    .match-card:hover{transform:translateY(-2px)}
   </style>
 </head>
 <body>
-  <header class="topbar">
+   <header class="topbar">
     <div class="container">
       <div class="brand">
-        <img src="./img/logo.png" alt="Placar Fácil logo" onerror="this.style.display='none'">
+        <img src="./img/logo.png" alt="Placar Fácil logo" />
         <div>
           <h4 style="margin:0">Placar Fácil</h4>
           <small>Crie jogos rapidamente — controle sets, pontos e veja o vencedor automático</small>
@@ -36,84 +38,354 @@
     <div class="row g-3">
       <div class="col-lg-5">
         <div class="card card-custom p-4">
-          <h5>Criar partida</h5>
-          <div class="mb-2"><input id="teamA" class="form-control" placeholder="Time A (ex: Flamengo)"></div>
-          <div class="mb-2"><input id="teamB" class="form-control" placeholder="Time B (ex: Palmeiras)"></div>
-          <div class="mb-2"><input id="name" class="form-control" placeholder="Nome da partida (opcional)"></div>
-          <div class="row g-2 mb-2">
-            <div class="col"><select id="sets" class="form-select"><option>1</option><option selected>3</option><option>5</option><option>7</option></select></div>
-            <div class="col"><input id="maxPoints" type="number" class="form-control" value="25" min="1"></div>
+          <h5 class="mb-3">Criar Nova Partida</h5>
+          <div class="mb-3">
+            <label class="form-label">Time A</label>
+            <input id="teamA" class="form-control" placeholder="Ex: Osasco" value="Osasco">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Time B</label>
+            <input id="teamB" class="form-control" placeholder="Ex: Minas" value="Minas">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nome da Partida (opcional)</label>
+            <input id="name" class="form-control" placeholder="Ex: Final Superliga de Volei">
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label">Sets</label>
+              <select id="sets" class="form-select">
+                <option value="1">1 set</option>
+                <option value="3" selected>3 sets</option>
+                <option value="5">5 sets</option>
+                <option value="7">7 sets</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Pontos por Set</label>
+              <input id="maxPoints" type="number" class="form-control" value="25" min="1">
+            </div>
           </div>
           <div class="d-flex gap-2">
-            <button id="btnCreate" class="btn btn-accent flex-fill">Criar partida</button>
-            <button id="btnRefresh" class="btn btn-outline-secondary">Atualizar</button>
+            <button id="btnCreate" class="btn btn-accent flex-fill">
+              Criar Partida
+            </button>
+            <button id="btnRefresh" class="btn btn-outline-secondary">
+              🔄
+            </button>
           </div>
+        </div>
+
+        <div class="card card-custom p-3 mt-3">
+          <h6>Como usar</h6>
+          <small class="text-muted">
+            1. Preencha os dados e clique em "Criar Partida"<br>
+            2. Clique em uma partida para abrir e marcar pontos<br>
+            3. O sistema calcula o vencedor automaticamente
+          </small>
         </div>
       </div>
 
       <div class="col-lg-7">
-        <div id="list"></div>
+        <h5 class="mb-3">Partidas</h5>
+        <div id="list">
+          <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando partidas...</p>
+          </div>
+        </div>
       </div>
     </div>
   </main>
 
-<script type="module">
-  let API_KEY = "";
+  <!-- Modal -->
+  <div id="matchModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">Partida</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="modalBody">
+          <!-- Conteúdo dinâmico -->
+        </div>
+      </div>
+    </div>
+  </div>
 
-  try {
-    const r = await fetch('.env?' + Date.now());
-    const text = await r.text();
-    const match = text.match(/API_KEY\s*=\s*(.+)/i);
-    if (match) API_KEY = match[1].trim().replace(/['"]/g, '');
-    console.log("Chave lida do .env:", API_KEY ? "OK" : "NÃO ENCONTRADA");
-  } catch (e) {
-    console.error("Erro lendo .env", e);
-  }
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="./config.js"></script>
+  <script>
+    // Configuração vem do config.js
+    const API_KEY = CONFIG.API_KEY;
+    const API_BASE = CONFIG.API_BASE;
+    
+    const headers = {
+      "Content-Type": "application/json",
+      "x-api-key": API_KEY
+    };
 
-  if (!API_KEY) {
-    alert("Chave não encontrada no .env");
-    throw "Sem chave";
-  }
+    function e(text) {
+      if (!text) return '';
+      return String(text).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+    }
 
-  const API_BASE = "https://ysy41qykyg.execute-api.sa-east-1.amazonaws.com/prod";
-  const headers = {
-    "Content-Type": "application/json",
-    "x-api-key": API_KEY
-  };
-
-  async function testarAPI() {
-    try {
-      const r = await fetch(`${API_BASE}/matches`, { headers });
-      console.log("Status da listagem:", r.status, r.statusText);
-      if (!r.ok) {
-        const texto = await r.text();
-        console.error("Resposta completa:", texto);
-        document.getElementById('list').innerHTML = `<div class="alert alert-danger">
-          Erro ${r.status}: ${r.statusText}<br><small>${texto.substring(0,200)}</small>
-        </div>`;
-        return false;
+    // API Functions
+    async function apiCall(endpoint, options = {}) {
+      try {
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+          ...options,
+          headers: { ...headers, ...options.headers }
+        });
+        
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`${response.status}: ${text}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('API Error:', error);
+        throw error;
       }
-      const data = await r.json();
-      console.log("Listagem funcionou!", data);
-      return data;
-    } catch (e) {
-      console.error("Erro de rede", e);
-      document.getElementById('list').innerHTML = `<div class="alert alert-danger">Erro de rede: ${e.message}</div>`;
-      return false;
     }
-  }
 
-  async function load() {
-    document.getElementById('list').innerHTML = "<p>Carregando...</p>";
-    const data = await testarAPI();
-    if (data && data.matches) {
-      document.getElementById('list').innerHTML = `<div class="alert alert-success">
-        TUDO FUNCIONANDO! ${data.matches.length} partidas encontradas
-      </div>`;
+    async function createMatch(data) {
+      return apiCall('/matches', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
     }
-  }
 
-  load();
-</script>
+    async function listMatches() {
+      return apiCall('/matches');
+    }
+
+    async function getMatch(id) {
+      return apiCall(`/matches/${id}`);
+    }
+
+    async function updateScore(id, data) {
+      return apiCall(`/matches/${id}/score`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+    }
+
+    // UI Functions
+    function renderMatches(matches) {
+      const container = document.getElementById('list');
+      
+      if (!matches || matches.length === 0) {
+        container.innerHTML = `
+          <div class="card card-custom p-4 text-center">
+            <p class="mb-0 text-muted">Nenhuma partida criada ainda</p>
+            <small class="text-muted">Crie sua primeira partida ao lado!</small>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = matches.map(m => {
+        const status = m.status === 'finalizado' 
+          ? `<span class="badge badge-winner">${e(m.vencedor || 'Empate')}</span>`
+          : `<span class="badge bg-success">Em andamento</span>`;
+        
+        return `
+          <div class="card card-custom p-3 mb-3 match-card" onclick="openMatch('${e(m.id)}')">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="mb-1">${e(m.teamA)} <small class="text-muted">vs</small> ${e(m.teamB)}</h6>
+                <small class="text-muted">
+                  ${m.sets ? m.sets.length : 0} sets jogados • 
+                  ${m.setsA || 0} x ${m.setsB || 0}
+                </small>
+              </div>
+              <div class="text-end">
+                ${status}
+                <br>
+                <small class="text-muted">${new Date(m.createdAt * 1000).toLocaleString('pt-BR')}</small>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function openMatch(matchId) {
+      try {
+        const match = await getMatch(matchId);
+        showMatchModal(match);
+      } catch (error) {
+        alert('Erro ao carregar partida: ' + error.message);
+      }
+    }
+
+    function showMatchModal(m) {
+      const modal = new bootstrap.Modal(document.getElementById('matchModal'));
+      
+      document.getElementById('modalTitle').innerHTML = 
+        `${e(m.teamA)} vs ${e(m.teamB)}`;
+      
+      let setsHtml = '';
+      if (m.sets && m.sets.length > 0) {
+        setsHtml = m.sets.map(s => `
+          <div class="set-box">
+            <div class="d-flex justify-content-between align-items-center">
+              <strong>Set ${s.set}</strong>
+              <div class="score">${s.A} <small class="text-muted">x</small> ${s.B}</div>
+              ${s.finished ? '<small class="text-success">✓ Finalizado</small>' : ''}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        setsHtml = '<p class="text-muted text-center py-3">Nenhum set iniciado ainda</p>';
+      }
+
+      const isFinished = m.status === 'finalizado';
+      
+      const controls = !isFinished ? `
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-accent" onclick="addPoint('${m.id}', 'A', 1)">
+            ${e(m.teamA)} +1
+          </button>
+          <button class="btn btn-outline-secondary" onclick="addPoint('${m.id}', 'A', -1)">
+            ${e(m.teamA)} -1
+          </button>
+          <button class="btn btn-accent" onclick="addPoint('${m.id}', 'B', 1)">
+            ${e(m.teamB)} +1
+          </button>
+          <button class="btn btn-outline-secondary" onclick="addPoint('${m.id}', 'B', -1)">
+            ${e(m.teamB)} -1
+          </button>
+        </div>
+        <button class="btn btn-outline-danger w-100 mt-2" onclick="finishMatch('${m.id}')">
+          🏁 Finalizar Partida
+        </button>
+      ` : `
+        <div class="alert alert-success text-center mt-3">
+          <strong>Vencedor: ${e(m.vencedor || 'Empate')}</strong>
+        </div>
+      `;
+
+      document.getElementById('modalBody').innerHTML = `
+        <div class="mb-3">
+          <h6>${e(m.name)}</h6>
+          <small class="text-muted">
+            ${m.setsTotal} sets • ${m.maxPointsPerSet} pontos por set
+          </small>
+        </div>
+        <div class="row text-center mb-3">
+          <div class="col-6">
+            <div class="card bg-light p-3">
+              <h3 class="mb-0">${m.setsA || 0}</h3>
+              <small class="text-muted">Sets ${e(m.teamA)}</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="card bg-light p-3">
+              <h3 class="mb-0">${m.setsB || 0}</h3>
+              <small class="text-muted">Sets ${e(m.teamB)}</small>
+            </div>
+          </div>
+        </div>
+        ${setsHtml}
+        ${controls}
+      `;
+      
+      modal.show();
+      
+      // Store current match ID
+      window.currentMatchId = m.id;
+    }
+
+    async function addPoint(matchId, team, delta) {
+      try {
+        await updateScore(matchId, { action: 'point', team, delta });
+        await openMatch(matchId); // Reload
+        await load(); // Refresh list
+      } catch (error) {
+        alert('Erro ao atualizar placar: ' + error.message);
+      }
+    }
+
+    async function finishMatch(matchId) {
+      if (!confirm('Tem certeza que deseja finalizar esta partida?')) return;
+      
+      try {
+        await updateScore(matchId, { action: 'finish' });
+        await openMatch(matchId);
+        await load();
+      } catch (error) {
+        alert('Erro ao finalizar partida: ' + error.message);
+      }
+    }
+
+    async function load() {
+      try {
+        const data = await listMatches();
+        renderMatches(data.matches || []);
+      } catch (error) {
+        document.getElementById('list').innerHTML = `
+          <div class="alert alert-danger">
+            <strong>Erro ao carregar partidas:</strong><br>
+            ${error.message}
+            <br><br>
+            <small>Verifique se a API Key está configurada corretamente.</small>
+          </div>
+        `;
+      }
+    }
+
+    // Event Listeners
+    document.getElementById('btnCreate').onclick = async () => {
+      const teamA = document.getElementById('teamA').value.trim();
+      const teamB = document.getElementById('teamB').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const sets = parseInt(document.getElementById('sets').value);
+      const maxPoints = parseInt(document.getElementById('maxPoints').value);
+
+     if (teamA === '') teamA = 'Time A';
+     if (teamB === '') teamB = 'Time B';
+      
+      try {
+        document.getElementById('btnCreate').disabled = true;
+        document.getElementById('btnCreate').innerHTML = '⏳ Criando...';
+        
+        await createMatch({
+          name: name || `${teamA} x ${teamB}`,
+          teamA,
+          teamB,
+          sets,
+          maxPoints
+        });
+        
+        // Clear form
+        document.getElementById('name').value = '';
+        
+        await load();
+        alert('Partida criada com sucesso!');
+      } catch (error) {
+        alert('Erro ao criar partida: ' + error.message);
+      } finally {
+        document.getElementById('btnCreate').disabled = false;
+        document.getElementById('btnCreate').innerHTML = 'Criar Partida';
+      }
+    };
+
+    document.getElementById('btnRefresh').onclick = load;
+
+    // Make functions global
+    window.openMatch = openMatch;
+    window.addPoint = addPoint;
+    window.finishMatch = finishMatch;
+
+    // Initial load
+    load();
+  </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ static/.env
 .env
 .env.local
 .env.*.local
+static/config.js
 
 # Node.js 
 node_modules/
